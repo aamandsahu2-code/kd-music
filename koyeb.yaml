@@ -1,0 +1,17 @@
+service:
+  name: vc-music-bot
+  instance:
+    type: nano
+    variables:
+      - key: API_ID
+        value: "@api_id"
+      - key: API_HASH
+        value: "@api_hash"
+      - key: SESSION
+        value: "@session"
+      - key: VC_SESSION
+        value: "@vc_session"
+  ports:
+    - name: web
+      port: 8080
+      protocol: tcp
