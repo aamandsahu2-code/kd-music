@@ -1,22 +1,20 @@
 FROM python:3.11-slim
 
-# Install FFmpeg + system deps
+# Install system dependencies FIRST
 RUN apt-get update && apt-get install -y \
     ffmpeg \
-    curl \
+    gcc \
+    g++ \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Copy files
-COPY . .
-
-# Install Python deps
+# Copy only requirements first (cache optimization)
+COPY requirements.txt .
 RUN pip3 install --no-cache-dir -r requirements.txt
 
-# Expose port (Koyeb requirement)
+# Copy rest of code
+COPY . .
+
 EXPOSE 8080
-
-# Start script
-CMD ["bash", "start.sh"]
-
+CMD ["python3", "app.py"]
