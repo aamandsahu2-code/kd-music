@@ -1,71 +1,62 @@
 import os
-import asyncio
 import logging
 from pyrogram import Client, filters
-from pytgcalls import PyTgCalls, idle
-from pytgcalls.types.input_stream import AudioPiped
 from yt_dlp import YoutubeDL
 
-# Logging
 logging.basicConfig(level=logging.INFO)
-print("🔥 VC Music Bot Starting...")
+print("🔥 SIMPLE MUSIC BOT Starting...")
 
-# Env vars direct
 API_ID = int(os.getenv("API_ID"))
 API_HASH = os.getenv("API_HASH")
 SESSION = os.getenv("SESSION")
-VC_SESSION = os.getenv("VC_SESSION")
-
-print(f"✅ Env loaded: API_ID={API_ID}")
 
 app = Client("music_bot", API_ID, API_HASH, session_string=SESSION)
-vc_client = Client("vc_session", API_ID, API_HASH, session_string=VC_SESSION)
-
-PyTgCalls(vc_client)
 
 @app.on_message(filters.command("start", prefixes="."))
 async def start(client, message):
-    await message.reply("**🎵 VC Music Bot Ready!**\n`.join` → `.play kesariya`")
+    await message.reply("**🎵 Simple Music Bot Ready!**\n`.song kesariya`")
 
-@app.on_message(filters.command("join", prefixes="."))
-async def join_vc(client, message):
-    try:
-        await vc_client.join_group_call(message.chat.id)
-        await message.reply("**✅ Joined VC!** `.play song_name`")
-        print(f"✅ Joined VC: {message.chat.id}")
-    except Exception as e:
-        await message.reply(f"**❌ Join error**: {str(e)}")
-
-@app.on_message(filters.command("play", prefixes="."))
-async def play_song(client, message):
+@app.on_message(filters.command("song", prefixes="."))
+async def download_song(client, message):
     if len(message.command) < 2:
-        return await message.reply("**Usage**: `.play kesariya`")
+        return await message.reply("**Usage**: `.song kesariya`")
     
     query = " ".join(message.command[1:])
-    await message.reply(f"**🔍 `{query}` loading...")
+    await message.reply(f"**🔍 Downloading** `{query}`...")
     
     try:
-        url = f"ytsearch1:{query}"
-        ydl_opts = {'quiet': True, 'no_warnings': True}
-        with YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(url, download=False)
-            title = info['entries'][0]['title'][:70]
+        ydl_opts = {
+            'format': 'bestaudio/best',
+            'outtmpl': 'music/%(title)s.%(ext)s',
+            'postprocessors': [{
+                'key': 'FFmpegExtractAudioPP',
+                'preferredcodec': 'mp3',
+                'preferredquality': '320',
+            }],
+        }
         
-        stream = AudioPiped(url)
-        await PyTgCalls.vc_client.change_stream(message.chat.id, stream)
-        await message.reply(f"**▶️ Playing**: **{title}**")
-        print(f"✅ Playing: {title}")
+        with YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(f"ytsearch1:{query}", download=True)
+            song = info['entries'][0]
+            
+        await message.reply_audio(
+            f"music/{song['title']}.mp3",
+            caption=f"**🎵 {song['title'][:50]}**\n👤 {song['uploader']}"
+        )
+        print(f"✅ Song sent: {song['title']}")
         
     except Exception as e:
-        await message.reply(f"**❌ Error**: {str(e)}")
+        await message.reply(f"**❌ Error**: `{str(e)[:100]}`")
 
 async def main():
-    print("🚀 Starting clients...")
+    print("🚀 Starting bot...")
     await app.start()
-    await vc_client.start()
-    print("✅ BOTH Clients Started!")
-    print("🎵 Bot FULLY LIVE!")
-    idle()
+    print("✅ Bot Started! Use `.song kesariya`")
+    print("🎵 LIVE!")
+    
+    # Keep alive
+    import asyncio
+    await asyncio.Event().wait()
 
 if __name__ == "__main__":
     asyncio.run(main())
